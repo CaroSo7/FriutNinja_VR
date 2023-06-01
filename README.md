@@ -36,11 +36,11 @@ Al comenzar una partida del juego, se inicia un contador de un minuto y el jugad
 
 ## Descripción del mando
 
-El mando utilizado en este juego de realidad virtual (VR) es una empuñadura de espada  diseñada para brindar una experiencia de corte de frutas inmersiva. El mando está construido con una cajita de madera que en su interior contiene elementos electróncios para capturar los movimientos del jugador y traducirlos al entorno virtual. Tiene un interruptor para encender el mando y además cuenta con una apertura en la que se encontrará el botón para reiniciar.
+El mando utilizado en este juego de realidad virtual (VR) es una empuñadura de espada diseñada para brindar una experiencia de corte de frutas inmersiva. Este está construido con una cajita de madera que en su interior contiene elementos electróncios para capturar los movimientos del jugador y traducirlos al entorno virtual. Tiene un interruptor para encender el mando y además cuenta con una apertura en la que se encontrará el botón para reiniciar. 
 
-En el interior de la empuñadura de espada se encuentra una placa ESP32, que actúa como el cerebro del mando. La ESP32 es un microcontrolador que proporciona la capacidad de procesamiento necesaria para capturar y transmitir los datos de movimiento al juego.
+En el interior de la empuñadura de espada se encuentra una placa ESP32, que actúa como el cerebro del mando. La ESP32 es un microcontrolador que proporciona la capacidad de procesamiento necesaria para capturar y transmitir los datos de movimiento al juego. Además, el mando está equipado con un acelerómetro ADXL345, un sensor que detecta los movimientos en el eje X. Este sensor permite que el juego registre y responda a los movimientos realizados por el jugador al mover la empuñadura de espada
 
-Además, el mando está equipado con un acelerómetro ADXL345, un sensor que detecta los movimientos en el eje X. Este sensor permite que el juego registre y responda a los movimientos realizados por el jugador al mover la empuñadura de espada
+En cuanto a la construcción de la lógica del juego en 3D a partir del mando, consiste en ejecutar el juego en un navegador web y utilizar HTML para crear la estructura de la página web, que contiene una biblioteca de gráficos para implementar la lógica del juego, las interacciones del movimiento con el usuario y el renderizado de la escena en 3D.
 
 ![Circuito electrónico](img/esquema.PNG)
 
