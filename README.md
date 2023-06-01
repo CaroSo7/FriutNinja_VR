@@ -1,15 +1,12 @@
 <div align="center">
 
-![banner](img/Titulo.png)
+![banner](img/Titulo.PNG)
 
 # FriutNinja_VR
 
 </div>
 
 Este es el proyecto final para nuestro curso de Sistemas Digitales II. El cual consiste en la construccion de un mando inalámbrico para el juego de Fruit Ninja en realidad aumentada
-# Nombre del juego
-
-[Fruit Ninja en VR]
 
 ## Propósito del juego
 
