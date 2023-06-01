@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>Babylon.js sample code</title>
+
+        <!-- Babylon.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+        <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
+        <script src="https://cdn.babylonjs.com/ammo.js"></script>
+        <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
+        <script src="https://cdn.babylonjs.com/cannon.js"></script>
+        <script src="https://cdn.babylonjs.com/Oimo.js"></script>
+        <script src="https://cdn.babylonjs.com/earcut.min.js"></script>
+        <script src="https://cdn.babylonjs.com/babylon.js"></script>
+        <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+        <script src="https://cdn.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+        <script src="https://cdn.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+        <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+        <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+        <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+            
+            #canvasZone {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </head>
+<body>
+    <div>
+		<div><button id="connectDevice" name="connectDevice">Connect BT Device</button></div>
+	    <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
+	</div>
+	<script src="btdevice.js"></script>
+    <script>
+		const mydevice = new BTDevice();
+		window.onload = function() {
+			// Connect / Disconnect button
+			connectDevice.addEventListener("click", () => {
+				mydevice.init( function(status){
+					if (status) {
+						connectDevice.innerHTML = "Disconnect BT Device";
+					} else {
+						connectDevice.innerHTML = "Connect BT Device";
+					}
+				});
+			});
+		}
+    </script>
+    <script>
+        var canvas = document.getElementById("renderCanvas");
+
+        var startRenderLoop = function (engine, canvas) {
+            engine.runRenderLoop(function () {
+                if (sceneToRender && sceneToRender.activeCamera) {
+                    sceneToRender.render();
+                }
+            });
+        }
+
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+        const fps = 60; //Frames per second
+const maxTime = 1 * 60 * fps;   //1 minute for the game
+var timeStamp = 0;
+
+const maxFruits = 3;
+var fruits = [];
+var fruitsStatus = [];
+var fruitsTimecount = [];
+var fruitsAngle = [];
+const fruitsFlyingTime = 3 * fps;
+var crushedActive = false;
+
+var katana;
+var hBar;
+var hCross;
+var animKatana;
+
+var totalPoints = 0;
+var pointsText;
+
+var gameStarted = false;
+var gameOver = false;
+
+
+// Crea la Katana
+var createKatana = function() {
+    katana  = BABYLON.MeshBuilder.CreateBox("katana", {width: 1, height: 1, depth: 1}); 
+    hBar = BABYLON.MeshBuilder.CreateCylinder("hBar", {height: 30, diameterTop: 0.5, diameterBottom: 2, tessellation: 8});
+    hCross = BABYLON.MeshBuilder.CreateCylinder("hCross", {height: 4, diameterTop: 2, diameterBottom: 2, tessellation: 16});
+    hCross.position.y = -3; 
+    hCross.rotation.z = Math.PI/2;
+    hCross.parent = hBar;
+    hBar.parent = katana;
+    katana.position.z = 20;
+    
+    //Animación de la katana golpeando
+    animKatana = new BABYLON.Animation("animKatana", "rotation.x", 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+    animKatanaKeys = []; 
+    animKatanaKeys.push({
+        frame: 0,
+        value: 0
+    }); 
+    animKatanaKeys.push({
+        frame: 15,
+        value: -Math.PI / 4
+    });
+    animKatana.setKeys(animKatanaKeys);
+    katana.animations.push(animKatana);
+}
+
+//Crea los botones de la interfaz gráfica
+var buttonTile = function ( buttonName, colorName, x, y, action ) {
+    var buttonX = BABYLON.GUI.Button.CreateSimpleButton("but"+buttonName, buttonName);
+    buttonX.width = "60px"
+    buttonX.height = "30px";
+    buttonX.color = "white";
+    buttonX.cornerRadius = 15;
+    buttonX.background = colorName;
+    buttonX.left = x;
+    buttonX.top = y;
+    buttonX.onPointerUpObservable.add(action);
+    return buttonX;
+}   
+
+//Funciones que se invocan cuando se presiona una tecla 
+
+var pressButtonLeft = function ( scene ) {
+    if (!gameStarted) {
+        startGame(scene);
+        return;
+    }
+    katana.rotation.z -= Math.PI/30;
+    if (katana.rotation.z < -Math.PI/4) {
+        katana.rotation.z = -Math.PI/4;
+    }
+}
+
+var pressButtonRight = function ( scene ) {
+    if (!gameStarted) {
+        startGame(scene);
+        return;
+    }
+    katana.rotation.z += Math.PI/30;
+    if (katana.rotation.z > Math.PI/4) {
+        katana.rotation.z = Math.PI/4;
+    }
+}
+
+var pressButtonFire = function ( scene ) {
+    if (!gameStarted) {
+        startGame(scene);
+        return;
+    }
+    setTimeout(async () => {
+        const anim = scene.beginAnimation(katana, 0, 15, false);
+        await anim.waitAsync();
+        katana.rotation.x = 0;
+    });
+}
+
+// Display time & point
+var showTime2 = function ( val ) {
+    if (val<10) {
+        return "0"+val;
+    } else {
+        return val;
+    }
+}
+var showTimeScore = function () {
+    var totalsecs = timeStamp/fps;
+    var nmin = Math.floor(totalsecs/60);
+    var nsec = Math.floor(totalsecs - nmin*60);
+    pointsText.text = "Time "+showTime2(nmin)+":"+showTime2(nsec)+" - Points "+totalPoints;
+}
+
+// Inicia el juego
+var startGame = function ( scene ) {
+    // Set fruits status
+    for (let i=0; i<maxFruits; i++) {
+        fruitsStatus[i] = 0;  
+        fruitsTimecount[i] = fps + Math.floor( Math.random()*fps );
+    }
+    // Update variables
+    timeStamp = 0;
+    crushedActive = false;
+    totalPoints = 0;
+    pointsText.text = "Time: 00:00 - Points: 0";
+    // Update status
+    gameStarted = true;
+    gameOver = false;
+}
+
+
+const createScene = function () {
+    const scene = new BABYLON.Scene(engine);
+
+    // Connect to device
+    const dsm = new BABYLON.DeviceSourceManager(engine);
+  
+    const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.5, 50, new BABYLON.Vector3(0, 0, 0));
+    camera.attachControl(canvas, true);
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0));
+
+    // Create katana
+    createKatana();
+
+    // GUI Elements        
+    var guiElements = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    pointsText = new BABYLON.GUI.TextBlock();
+    pointsText.text = "Press any key to start";
+    pointsText.color = "white";
+    pointsText.fontSize = 24;
+    pointsText.top = "-45%";
+    guiElements.addControl(pointsText);    
+
+    //guiElements.addControl( buttonTile( "W", "blue", "35%", "35%", function() { pressButtonUp(scene); } ) );
+    guiElements.addControl( buttonTile( "A", "blue", "25%", "40%", function() { pressButtonLeft(scene); }) );
+    //guiElements.addControl( buttonTile( "S", "blue", "35%", "45%", function() { pressButtonDown(scene); }) );
+    guiElements.addControl( buttonTile( "D", "blue", "45%", "40%", function() { pressButtonRight(scene); }) );
+    guiElements.addControl( buttonTile( "Space", "red", "35%", "40%", function() { pressButtonFire(scene); }) );
+	    
+	// Mole
+	BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/jimarinh/immersiuqube/0fff742ae0f1e32c9924c042c06aa6707318a9fd/fruitninja/", "orange.gltf", scene, function(newMeshes){
+		fruits[0] = newMeshes[0]; 
+        fruits[0].scaling = new BABYLON.Vector3(0.05, 0.05, 0.05);
+		fruits[0].rotation = new BABYLON.Vector3(0, 0,0);        
+        fruits[0].position.z = -50;
+        for(let i=1; i<maxFruits; i++) {
+            fruits[i] = fruits[0].clone("fruit"+i);
+            fruits[i].position.z  = -50;
+        }
+        gameStarted = false;
+        gameOver = false;
+
+        // Main game loop
+        scene.registerBeforeRender(function () {
+            
+            if (gameStarted && !gameOver) {
+                // Display time & score
+                showTimeScore();
+                
+                // Update fruits
+                for(let i=0; i<fruits.length; i++) {
+                    //Change fruit state if counter is zero 
+                    fruitsTimecount[i]--;
+                    if (fruitsTimecount[i] == 0) { 
+                        fruitsStatus[i]++; 
+                        if (fruitsStatus[i]==1) { //time for moving
+                            fruitsTimecount[i] = fruitsFlyingTime;
+                        }
+                        if (fruitsStatus[i] >= 2) { //end of moving
+                            fruits[i].position.z = -50;
+                            fruitsStatus[i] = 0;
+                            fruitsTimecount[i] = fps + Math.floor( Math.random()*2*fps );
+                        }
+                    }
+                    //Perform animation depending on mole status
+                    switch(fruitsStatus[i]) {
+                        case 0: //standby: compute angle for the next launch
+                            fruits[i].position.x = 0;
+                            fruits[i].position.z = -50;
+                            fruits[i].position.y = 0;
+                            fruits[i].scaling.x = 0.05;
+                            fruitsAngle[i] = Math.PI*(Math.floor(Math.random()*20)-10)/40;
+                            break;
+                        case 1: //moving
+                            fruits[i].position.z += 70/fruitsFlyingTime;
+                            fruits[i].position.x = 15*Math.sin(fruitsAngle[i] *(1.0-fruitsTimecount[i]/fruitsFlyingTime));
+                            fruits[i].position.y = 15*Math.cos(fruitsAngle[i] *(1.0-fruitsTimecount[i]/fruitsFlyingTime));
+                            fruits[i].rotation.z += Math.PI/30;
+                            if (fruits[i].rotation.z > Math.PI) {
+                                fruits[i].rotation.z = -Math.PI;
+                            }
+                            break;
+                        case 2: //fruit is crushed
+						    fruits[i].scaling.x *= 0.95;
+                            break;
+                    }
+
+                    // Check if the fruit is crushed
+                    if ( (fruitsStatus[i]==1) &&
+                         (fruits[i].position.z > 15) &&
+                         (fruits[i].position.z < 20) &&
+                         (fruitsAngle[i] > -katana.rotation.z - Math.PI/30) &&
+                         (fruitsAngle[i] < -katana.rotation.z + Math.PI/30) ) 
+                         {
+                            fruitsStatus[i] = 2;
+                            fruitsTimecount[i] = fps;
+                            totalPoints++;
+                        }
+                } 
+                
+                timeStamp++;
+                //Check if game over
+                if (timeStamp > maxTime) {
+                    pointsText.text = "Game Over - " + pointsText.text;
+                    gameStarted = false;
+                    gameOver = true;
+                }
+            }
+
+            // Read keyboard
+            if (dsm.getDeviceSource(BABYLON.DeviceType.Keyboard)) {
+                if (dsm.getDeviceSource(BABYLON.DeviceType.Keyboard).getInput(65) == 1) {
+                   pressButtonLeft(scene);
+                }
+                if (dsm.getDeviceSource(BABYLON.DeviceType.Keyboard).getInput(68) == 1) {
+                    pressButtonRight(scene);
+                }
+                if (dsm.getDeviceSource(BABYLON.DeviceType.Keyboard).getInput(32) == 1) {
+                    pressButtonFire(scene);
+                }
+            }
+          
+            mydevice.read(function(str){
+ 		console.log(str);
+                const obj = JSON.parse(str,	function (key, value) {
+                if (key == "fire" && value == "1") {
+                    pressButtonFire(scene);
+                 }
+                  if (key == "ax") {
+                    if (value > 0) { pressButtonRight(scene);}
+                    //katana.rotation.x = value * 2.3;
+                    if (value < 0) {pressButtonLeft(scene);}
+                  }
+                });
+            });
+            
+        });
+	});
+	
+/*
+    var layer = new BABYLON.Layer("background", null, scene, true);
+    BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+        videoTexture.vScale = -1.0;
+        videoTexture.uScale = canvas.width / canvas.height * videoTexture.getSize().height / videoTexture.getSize().width;
+        layer.texture = videoTexture;
+    }, { maxWidth: 640, maxHeight: 480, deviceId: 1 });
+*/
+    return scene;
+
+};
+
+                window.initFunction = async function() {
+                    
+                    
+                    
+                    var asyncEngineCreation = async function() {
+                        try {
+                        return createDefaultEngine();
+                        } catch(e) {
+                        console.log("the available createEngine function failed. Creating the default engine instead");
+                        return createDefaultEngine();
+                        }
+                    }
+
+                    window.engine = await asyncEngineCreation();
+        if (!engine) throw 'engine should not be null.';
+        startRenderLoop(engine, canvas);
+        window.scene = createScene();};
+        initFunction().then(() => {sceneToRender = scene                    
+        });
+
+        // Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
