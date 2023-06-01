@@ -2,7 +2,7 @@
 
 ![banner](img/Titulo.PNG)
 
-# FriutNinja_VR
+# Friut Ninja en VR
 
 </div>
 
